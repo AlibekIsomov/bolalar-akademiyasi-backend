@@ -3,14 +3,66 @@ package controllers
 import (
 	"bolalar-akademiyasi/database"
 	"bolalar-akademiyasi/models"
-	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
+	"strings"
+	"math"
+
+	"github.com/gin-gonic/gin"
 )
 
 func GetClients(c *gin.Context) {
 	var clients []models.Client
-	database.DB.Find(&clients)
-	c.JSON(http.StatusOK, clients)
+	var totalClients int64
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	sort := c.DefaultQuery("sort", "created_at:desc")
+	search := c.DefaultQuery("search", "")
+
+	offset := (page - 1) * limit
+
+	sortField := strings.Split(sort, ":")[0]
+	sortOrder := strings.Split(sort, ":")[1]
+
+	// Convert sortField to the correct database column name if necessary
+	if sortField == "CreatedAt" {
+		sortField = "created_at"
+	}
+
+	query := database.DB.Model(&models.Client{})
+
+	// Apply search if provided
+	if search != "" {
+		searchQuery := "%" + search + "%"
+		query = query.Where("name ILIKE ? OR phone_number ILIKE ?", searchQuery, searchQuery)
+	}
+
+	// Count total clients (after applying search)
+	query.Count(&totalClients)
+
+	// Apply sorting
+	if sortOrder == "desc" {
+		query = query.Order(sortField + " DESC")
+	} else {
+		query = query.Order(sortField)
+	}
+
+	// Apply pagination
+	query.Offset(offset).Limit(limit).Find(&clients)
+
+	// Calculate total pages
+	totalPages := int(math.Ceil(float64(totalClients) / float64(limit)))
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":       clients,
+		"page":       page,
+		"limit":      limit,
+		"sort":       sort,
+		"search":     search,
+		"totalPages": totalPages,
+		"totalItems": totalClients,
+	})
 }
 
 func GetClient(c *gin.Context) {

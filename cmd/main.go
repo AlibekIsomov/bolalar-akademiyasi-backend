@@ -5,7 +5,9 @@ import (
 	"bolalar-akademiyasi/database"
 	"bolalar-akademiyasi/models"
 	"bolalar-akademiyasi/routes"
+	"bolalar-akademiyasi/telegramBot"
 	_ "github.com/gin-gonic/gin"
+	"log"
 )
 
 func main() {
@@ -17,6 +19,10 @@ func main() {
 	// Auto-migrate the Client model
 	database.DB.AutoMigrate(&models.Client{})
 
+	go func() {
+		log.Println("Starting Telegram bot...")
+		telegramBot.Telegrambot() // Run your telegram bot
+	}()
 	// Setup routes
 	router := routes.SetupRouter()
 

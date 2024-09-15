@@ -11,4 +11,5 @@ type Client struct {
 	Age            int    `json:"age"`
 	ClientsComment string `json:"clients_comment"`
 	Status         string `json:"status"`
+	ChatID		   int64 `json:"chatID"`
 }
