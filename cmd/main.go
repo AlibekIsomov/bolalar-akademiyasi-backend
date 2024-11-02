@@ -6,11 +6,17 @@ import (
 	"bolalar-akademiyasi/models"
 	"bolalar-akademiyasi/routes"
 	"bolalar-akademiyasi/telegramBot"
-	_ "github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"log"
 )
 
 func main() {
+	// Load .env file
+	err := godotenv.Load("application-properties.env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	cfg := config.LoadConfig()
 
 	// Initialize database
@@ -23,6 +29,7 @@ func main() {
 		log.Println("Starting Telegram bot...")
 		telegramBot.Telegrambot() // Run your telegram bot
 	}()
+
 	// Setup routes
 	router := routes.SetupRouter()
 

@@ -76,7 +76,7 @@ func Telegrambot() {
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
+	u.Timeout = 240
 
 	updates := bot.GetUpdatesChan(u)
 
@@ -224,6 +224,8 @@ func handleAge(message *tgbotapi.Message, msg *tgbotapi.MessageConfig) {
 		PhoneNumber: userData[message.Chat.ID]["phone_number"],
 		Age:         age,
 		ChatID:      message.Chat.ID, // Save the chat ID
+		Status:      models.Active,          // Set the status (e.g., "Active")
+		Source:      models.Telegram,
 	}
 
 	result := database.DB.Create(&client)

@@ -3,13 +3,20 @@ package controllers
 import (
 	"bolalar-akademiyasi/database"
 	"bolalar-akademiyasi/models"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
-	"math"
 
 	"github.com/gin-gonic/gin"
 )
+
+var stringToStatus = map[string]models.Status{
+	"active":   models.Active,
+	"inactive": models.Inactive,
+	"pending":  models.Pending,
+	"agree":    models.Agree,
+}
 
 func GetClients(c *gin.Context) {
 	var clients []models.Client
@@ -17,17 +24,27 @@ func GetClients(c *gin.Context) {
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	sort := c.DefaultQuery("sort", "created_at:desc")
+	sort := c.DefaultQuery("sort", "id:desc") // Default to sorting by id
 	search := c.DefaultQuery("search", "")
+	statusFilter := c.DefaultQuery("status", "")
 
 	offset := (page - 1) * limit
 
-	sortField := strings.Split(sort, ":")[0]
-	sortOrder := strings.Split(sort, ":")[1]
+	// Validate and split the sort parameter
+	sortParts := strings.Split(sort, ":")
+	if len(sortParts) != 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort parameter"})
+		return
+	}
+	sortField := sortParts[0]
+	sortOrder := sortParts[1]
 
 	// Convert sortField to the correct database column name if necessary
-	if sortField == "CreatedAt" {
+	switch sortField {
+	case "CreatedAt":
 		sortField = "created_at"
+	case "Status":
+		sortField = "status"
 	}
 
 	query := database.DB.Model(&models.Client{})
@@ -38,18 +55,34 @@ func GetClients(c *gin.Context) {
 		query = query.Where("name ILIKE ? OR phone_number ILIKE ?", searchQuery, searchQuery)
 	}
 
-	// Count total clients (after applying search)
-	query.Count(&totalClients)
+	// Apply status filter if provided
+	if statusFilter != "" {
+		status, ok := stringToStatus[statusFilter]
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status filter"})
+			return
+		}
+		query = query.Where("status = ?", status.String())
+	}
+
+	// Count total clients (after applying search and status filter)
+	if err := query.Count(&totalClients).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count clients"})
+		return
+	}
 
 	// Apply sorting
 	if sortOrder == "desc" {
 		query = query.Order(sortField + " DESC")
 	} else {
-		query = query.Order(sortField)
+		query = query.Order(sortField + " ASC")
 	}
 
 	// Apply pagination
-	query.Offset(offset).Limit(limit).Find(&clients)
+	if err := query.Offset(offset).Limit(limit).Find(&clients).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch clients"})
+		return
+	}
 
 	// Calculate total pages
 	totalPages := int(math.Ceil(float64(totalClients) / float64(limit)))
@@ -60,6 +93,7 @@ func GetClients(c *gin.Context) {
 		"limit":      limit,
 		"sort":       sort,
 		"search":     search,
+		"status":     statusFilter,
 		"totalPages": totalPages,
 		"totalItems": totalClients,
 	})
@@ -81,8 +115,19 @@ func CreateClient(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	database.DB.Create(&client)
-	c.JSON(http.StatusOK, client)
+	if client.ChatID != 0 {
+		client.Source = models.Telegram
+	}
+	client.Status = models.Active
+
+	if err := database.DB.Create(&client).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create client"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Client created successfully",
+		"client":  client,
+	})
 }
 
 func UpdateClient(c *gin.Context) {
@@ -96,16 +141,29 @@ func UpdateClient(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	database.DB.Save(&client)
-	c.JSON(http.StatusOK, client)
+	if err := database.DB.Save(&client).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update client"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Client updated successfully",
+		"client":  client,
+	})
 }
 
 func DeleteClient(c *gin.Context) {
 	id := c.Param("id")
 	var client models.Client
-	if err := database.DB.Delete(&client, id).Error; err != nil {
+	if err := database.DB.First(&client, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Client not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Client deleted"})
+	if err := database.DB.Delete(&client).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete client"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Client deleted successfully",
+		"id":      id,
+	})
 }
