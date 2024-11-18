@@ -12,7 +12,7 @@ func SetupRouter() *gin.Engine {
 	router := gin.New()
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://185.250.44.239", "http://185.250.44.239/admin", "http://127.0.0.1:5501", "http://127.0.0.1:5502"},
+		AllowOrigins:     []string{"http://185.250.44.239", "http://185.250.44.239/admin", "https://admin.bolalar-akademiyasi.uz", "https://bolalar-akademiyasi.uz", "http://127.0.0.1:5501"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
