@@ -19,19 +19,19 @@ func SetupRouter() *gin.Engine {
 	}))
 
 	// Public routes
-	router.POST("/auth/login", controllers.Auth)
+	router.POST("/api/auth/login", controllers.Auth)
 
 	// Protected routes
 	protected := router.Group("/")
 	protected.Use(middleware.JWTAuthMiddleware())
 	{
-		protected.GET("/clients", controllers.GetClients)
-		protected.GET("/clients/:id", controllers.GetClient)
+		protected.GET("/api/clients", controllers.GetClients)
+		protected.GET("/api/clients/:id", controllers.GetClient)
 
-		protected.PUT("/clients/:id", controllers.UpdateClient)
-		protected.DELETE("/clients/:id", controllers.DeleteClient)
+		protected.PUT("/api/clients/:id", controllers.UpdateClient)
+		protected.DELETE("/api/clients/:id", controllers.DeleteClient)
 	}
-	router.POST("/clients", controllers.CreateClient)
+	router.POST("/api/clients", controllers.CreateClient)
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Route not found"})
 	})
