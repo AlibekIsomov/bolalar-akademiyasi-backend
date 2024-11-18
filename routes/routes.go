@@ -28,6 +28,8 @@ func SetupRouter() *gin.Engine {
 		protected.GET("/api/clients", controllers.GetClients)
 		protected.GET("/api/clients/:id", controllers.GetClient)
 
+		protected.POST("/api/clients/:id", controllers.GetClient)
+
 		protected.PUT("/api/clients/:id", controllers.UpdateClient)
 		protected.DELETE("/api/clients/:id", controllers.DeleteClient)
 	}
