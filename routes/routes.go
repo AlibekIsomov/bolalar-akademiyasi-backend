@@ -33,7 +33,6 @@ func SetupRouter() *gin.Engine {
 		protected.PUT("/api/clients/:id", controllers.UpdateClient)
 		protected.DELETE("/api/clients/:id", controllers.DeleteClient)
 	}
-	router.POST("/api/clients", controllers.CreateClient)
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Route not found"})
 	})
